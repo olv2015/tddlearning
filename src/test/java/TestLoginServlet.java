@@ -1,3 +1,4 @@
+import org.junit.Before;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -12,35 +13,46 @@ import static junit.framework.TestCase.assertEquals;
  */
 public class TestLoginServlet {
 
-    @Test
-    public void wrongPasswordShouldReditectToErrorPage() throws Exception {
-        HttpServlet servlet = new LoginServlet();
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login");
-        request.addParameter("j_username", "nosuchuser");
-        request.addParameter("j_password", "wrongpassword");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        servlet.service(request, response);
-        assertEquals("/invalidlogin", response.getRedirectedUrl());
-    }
+    private static final String VALID_USERNAME = "validuser";
+    private static final String CORRECT_PASSWORD = "validpassword";
 
-    @Test
-    public void validLoginForwardsToFrontPageAndStoresUserName() throws Exception{
-        final String validUserName = "validuser";
-        final String validPassword = "validpassword";
-        final FakeAuthentificationService authentificator = new FakeAuthentificationService();
-        authentificator.addUser(validUserName, validPassword);
+    private LoginServlet servlet;
+    private FakeAuthentificationService authentificator;
+    private MockHttpServletRequest request;
+    private MockHttpServletResponse response;
 
-        HttpServlet servlet = new LoginServlet(){
+
+
+    @Before
+    public void setUp(){
+        authentificator = new FakeAuthentificationService();
+        authentificator.addUser(VALID_USERNAME, CORRECT_PASSWORD);
+        servlet = new LoginServlet(){
             @Override
             protected AuthentificationService getAuthentificationService() {
                 return authentificator;
             }
 
         };
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login");
-        request.addParameter("j_username", validUserName);
-        request.addParameter("j_password", validPassword);
-        MockHttpServletResponse response = new MockHttpServletResponse();
+        request = new MockHttpServletRequest();
+        request.setMethod("GET");
+        response = new MockHttpServletResponse();
+    }
+
+    @Test
+    public void wrongPasswordShouldReditectToErrorPage() throws Exception {
+
+        request.addParameter("j_username", VALID_USERNAME);
+        request.addParameter("j_password", "wrongpassword");
+        servlet.service(request, response);
+        assertEquals("/invalidlogin", response.getRedirectedUrl());
+    }
+
+    @Test
+    public void validLoginForwardsToFrontPageAndStoresUserName() throws Exception{
+
+        request.addParameter("j_username", VALID_USERNAME);
+        request.addParameter("j_password", CORRECT_PASSWORD);
         servlet.service(request, response);
         assertEquals("/frontpage", response.getRedirectedUrl());
         assertEquals("validuser", request.getSession().getAttribute("username"));
